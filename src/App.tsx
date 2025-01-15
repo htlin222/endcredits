@@ -27,35 +27,34 @@ const CreditsRoll = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [startOffset, setStartOffset] = useState(25);
-  const [currentPosition, setCurrentPosition] = useState(25);
   const [showSettings, setShowSettings] = useState(false);
   const [hue, setHue] = useState(0); // 0-360 degrees
   const [fontSize, setFontSize] = useState(100); // percentage of base size
-  const containerRef = useRef(null);
-  const contentRef = useRef(null);
-  const [contentHeight, setContentHeight] = useState(0);
-  const [windowHeight, setWindowHeight] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (contentRef.current) {
-      setContentHeight(contentRef.current.offsetHeight);
-    }
-    setWindowHeight(window.innerHeight);
-
     const handleResize = () => {
-      setWindowHeight(window.innerHeight);
+      // Update container dimensions on resize if needed
+      if (contentRef.current) {
+        contentRef.current.style.height = `${window.innerHeight}px`;
+      }
     };
 
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [markdown]);
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setMarkdown(e.target.result);
+        const result = e.target?.result;
+        if (typeof result === 'string') {
+          setMarkdown(result);
+        }
       };
       reader.readAsText(file);
     }
@@ -63,43 +62,39 @@ const CreditsRoll = () => {
 
   const togglePlay = () => {
     if (isPlaying) {
-      // When pausing, capture the current position
       const element = containerRef.current;
-      if (element) {
+      if (element && element.parentElement) {
         const style = window.getComputedStyle(element);
         const matrix = new WebKitCSSMatrix(style.transform);
         const currentY = (matrix.m42 / element.parentElement.offsetHeight) * 100;
-        setCurrentPosition(currentY);
+        const newOffset = Math.max(0, Math.min(200, currentY));
+        setStartOffset(newOffset);
       }
     }
     setIsPlaying(!isPlaying);
   };
 
-  const handleSpeedChange = (e) => {
+  const handleSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSpeed = parseFloat(e.target.value);
     setSpeed(newSpeed);
   };
 
-  const handleOffsetChange = (e) => {
+  const handleOffsetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newOffset = parseInt(e.target.value);
     setStartOffset(newOffset);
   };
 
-  const handleHueChange = (e) => {
+  const handleHueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setHue(parseInt(e.target.value));
   };
 
-  const handleFontSizeChange = (e) => {
+  const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFontSize(parseInt(e.target.value));
   };
 
-  const handleAnimationEnd = () => {
-    setIsPlaying(false);
-  };
-
-  const renderMarkdown = (text) => {
+  const renderMarkdown = (text: string) => {
     const baseTextSize = fontSize / 100;
-    return text.split('\n').map((line, index) => {
+    return text.split('\n').map((line: string, index: number) => {
       if (line.startsWith('# ')) {
         return (
           <h1 
@@ -142,6 +137,10 @@ const CreditsRoll = () => {
     });
   };
 
+  const handleAnimationEnd = () => {
+    setIsPlaying(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black flex flex-col">
       {/* Control buttons */}
@@ -150,14 +149,15 @@ const CreditsRoll = () => {
           onClick={() => {
             setIsPlaying(false);
             setStartOffset(25);  // Reset to default value
-            if (containerRef.current) {
-              containerRef.current.style.animation = 'none';
-              containerRef.current.offsetHeight; // Force reflow
-              containerRef.current.style.transform = `translateY(25%)`;
+            const container = containerRef.current;
+            if (container) {
+              container.style.animation = 'none';
+              container.offsetHeight; // Force reflow
+              container.style.transform = `translateY(25%)`;
               requestAnimationFrame(() => {
-                if (containerRef.current) {
-                  containerRef.current.style.animation = `scroll-up ${20 / speed}s linear forwards`;
-                  containerRef.current.style.animationPlayState = 'paused';
+                if (container) {
+                  container.style.animation = `scroll-up ${20 / speed}s linear forwards`;
+                  container.style.animationPlayState = 'paused';
                 }
               });
             }
@@ -277,14 +277,15 @@ const CreditsRoll = () => {
             const delta = e.deltaY > 0 ? 2 : -2;
             const newOffset = Math.max(0, Math.min(200, startOffset + delta));
             setStartOffset(newOffset);
-            if (containerRef.current) {
-              containerRef.current.style.animation = 'none';
-              containerRef.current.offsetHeight; // Force reflow
-              containerRef.current.style.transform = `translateY(${newOffset}%)`;
+            const container = containerRef.current;
+            if (container) {
+              container.style.animation = 'none';
+              container.offsetHeight; // Force reflow
+              container.style.transform = `translateY(${newOffset}%)`;
               requestAnimationFrame(() => {
-                if (containerRef.current) {
-                  containerRef.current.style.animation = `scroll-up ${20 / speed}s linear forwards`;
-                  containerRef.current.style.animationPlayState = 'paused';
+                if (container) {
+                  container.style.animation = `scroll-up ${20 / speed}s linear forwards`;
+                  container.style.animationPlayState = 'paused';
                 }
               });
             }
@@ -308,16 +309,15 @@ const CreditsRoll = () => {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes scroll-up {
-          0% {
-            transform: translateY(${startOffset}%);
+      <style>
+        {`
+          @keyframes scroll-up {
+            to {
+              transform: translateY(-100%);
+            }
           }
-          100% {
-            transform: translateY(-${contentHeight + 96}px);
-          }
-        }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
