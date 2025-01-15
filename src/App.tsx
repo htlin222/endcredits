@@ -27,6 +27,7 @@ const CreditsRoll = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [startOffset, setStartOffset] = useState(25);
+  const [currentPosition, setCurrentPosition] = useState(25);
   const [showSettings, setShowSettings] = useState(false);
   const [hue, setHue] = useState(0); // 0-360 degrees
   const [fontSize, setFontSize] = useState(100); // percentage of base size
@@ -61,6 +62,16 @@ const CreditsRoll = () => {
   };
 
   const togglePlay = () => {
+    if (isPlaying) {
+      // When pausing, capture the current position
+      const element = containerRef.current;
+      if (element) {
+        const style = window.getComputedStyle(element);
+        const matrix = new WebKitCSSMatrix(style.transform);
+        const currentY = (matrix.m42 / element.parentElement.offsetHeight) * 100;
+        setCurrentPosition(currentY);
+      }
+    }
     setIsPlaying(!isPlaying);
   };
 
@@ -140,7 +151,15 @@ const CreditsRoll = () => {
             setIsPlaying(false);
             setStartOffset(25);  // Reset to default value
             if (containerRef.current) {
+              containerRef.current.style.animation = 'none';
+              containerRef.current.offsetHeight; // Force reflow
               containerRef.current.style.transform = `translateY(25%)`;
+              requestAnimationFrame(() => {
+                if (containerRef.current) {
+                  containerRef.current.style.animation = `scroll-up ${20 / speed}s linear forwards`;
+                  containerRef.current.style.animationPlayState = 'paused';
+                }
+              });
             }
           }}
           className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
@@ -259,7 +278,15 @@ const CreditsRoll = () => {
             const newOffset = Math.max(0, Math.min(200, startOffset + delta));
             setStartOffset(newOffset);
             if (containerRef.current) {
+              containerRef.current.style.animation = 'none';
+              containerRef.current.offsetHeight; // Force reflow
               containerRef.current.style.transform = `translateY(${newOffset}%)`;
+              requestAnimationFrame(() => {
+                if (containerRef.current) {
+                  containerRef.current.style.animation = `scroll-up ${20 / speed}s linear forwards`;
+                  containerRef.current.style.animationPlayState = 'paused';
+                }
+              });
             }
           }
         }}
@@ -268,8 +295,9 @@ const CreditsRoll = () => {
           ref={containerRef}
           className="absolute w-full text-center px-4"
           style={{
-            animation: isPlaying ? `scroll-up ${20 / speed}s linear forwards` : 'none',
-            transform: !isPlaying ? `translateY(${startOffset}%)` : null
+            animation: `scroll-up ${20 / speed}s linear forwards`,
+            animationPlayState: isPlaying ? 'running' : 'paused',
+            transform: containerRef.current?.style.animation === 'none' ? `translateY(${startOffset}%)` : undefined
           }}
           onAnimationEnd={handleAnimationEnd}
         >
