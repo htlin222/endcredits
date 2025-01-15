@@ -2,6 +2,8 @@
 
 A React-based application for creating and displaying scrolling end credits, similar to those seen in movies and TV shows.
 
+[demo](https://endcredits.netlify.app/)
+
 ## Features
 
 - 🎬 Smooth scrolling animation for credits
