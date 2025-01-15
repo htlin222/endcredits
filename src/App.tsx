@@ -1,12 +1,11 @@
-import React, { useState, useRef, useEffect, ChangeEvent } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Upload, MoreVertical } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 const sampleMarkdown = `# Cast
 * John Smith as Hero
@@ -27,21 +26,17 @@ const CreditsRoll = () => {
   const [markdown, setMarkdown] = useState(sampleMarkdown);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [startOffset, setStartOffset] = useState(133); // Default 100% (just below window)
+  const [startOffset, setStartOffset] = useState(25);
   const [showSettings, setShowSettings] = useState(false);
-  const [fontSize, setFontSize] = useState(16); // Base font size in px
-  
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFontSize(parseInt(e.target.value));
-  };
-  const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [hue, setHue] = useState(0); // 0-360 degrees
+  const [fontSize, setFontSize] = useState(100); // percentage of base size
+  const containerRef = useRef(null);
+  const contentRef = useRef(null);
   const [contentHeight, setContentHeight] = useState(0);
   const [windowHeight, setWindowHeight] = useState(0);
 
   useEffect(() => {
-    if (contentRef.current && contentRef.current.offsetHeight) {
+    if (contentRef.current) {
       setContentHeight(contentRef.current.offsetHeight);
     }
     setWindowHeight(window.innerHeight);
@@ -54,192 +49,84 @@ const CreditsRoll = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [markdown]);
 
-  const { toast } = useToast();
-  
-  const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    if (!file.name.endsWith('.md')) {
-      toast({
-        title: 'Invalid File',
-        description: 'Please upload a .md file',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e: ProgressEvent<FileReader>) => {
-      if (typeof e.target?.result === 'string') {
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
         setMarkdown(e.target.result);
-        toast({
-          title: 'File Uploaded',
-          description: `Successfully loaded ${file.name}`,
-        });
-      } else {
-        toast({
-          title: 'Upload Failed',
-          description: 'Could not read file content',
-          variant: 'destructive',
-        });
-      }
-    };
-    reader.onerror = () => {
-      toast({
-        title: 'Upload Failed',
-        description: 'Could not read file',
-        variant: 'destructive',
-      });
-    };
-    reader.readAsText(file);
-  };
-
-  const animationFrameRef = useRef<number>();
-  const startTimeRef = useRef<number>(0);
-  const [currentPosition, setCurrentPosition] = useState(0);
-
-  const animate = (timestamp: number) => {
-    if (!startTimeRef.current) {
-      startTimeRef.current = timestamp;
-    }
-    
-    const elapsed = timestamp - startTimeRef.current;
-    const progress = (elapsed / 1000) * speed * 100; // pixels per second
-    
-    if (containerRef.current) {
-      const newPosition = currentPosition - progress;
-      containerRef.current.style.transform = `translateY(${newPosition}px)`;
-      setCurrentPosition(newPosition);
-      
-      if (isPlaying) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-      }
+      };
+      reader.readAsText(file);
     }
   };
-
-  useEffect(() => {
-    if (isPlaying) {
-      startTimeRef.current = 0;
-      animationFrameRef.current = requestAnimationFrame(animate);
-    } else if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isPlaying, speed]);
 
   const togglePlay = () => {
-    if (!isPlaying) {
-      startTimeRef.current = performance.now() - (currentPosition / (speed * 100)) * 1000;
-    }
     setIsPlaying(!isPlaying);
   };
 
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleReload = () => {
-    setIsPlaying(false);
-    setCurrentPosition(0);
-    if (containerRef.current) {
-      containerRef.current.style.transform = `translateY(0px)`;
-    }
-  };
-
-  const handleSpeedChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleSpeedChange = (e) => {
     const newSpeed = parseFloat(e.target.value);
     setSpeed(newSpeed);
-    if (containerRef.current) {
-      const duration = (contentHeight + windowHeight) / (100 * newSpeed);
-      containerRef.current.style.animationDuration = `${duration}s`;
-    }
   };
 
-  const handleOffsetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOffsetChange = (e) => {
     const newOffset = parseInt(e.target.value);
     setStartOffset(newOffset);
+  };
+
+  const handleHueChange = (e) => {
+    setHue(parseInt(e.target.value));
+  };
+
+  const handleFontSizeChange = (e) => {
+    setFontSize(parseInt(e.target.value));
   };
 
   const handleAnimationEnd = () => {
     setIsPlaying(false);
   };
 
-  useEffect(() => {
-    if (containerRef.current) {
-      const duration = (contentHeight + windowHeight) / (100 * speed);
-      containerRef.current.style.animationDuration = `${duration}s`;
-    }
-  }, [contentHeight, windowHeight, speed, fontSize]);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      setContentHeight(contentRef.current.offsetHeight);
-    }
-  }, [fontSize]);
-
-  const renderMarkdown = (text: string): JSX.Element[] => {
-    const baseSize = fontSize;
-    return text.split('\n').map((line: string, index: number) => {
-      // Handle headers
-      if (line.startsWith('### ')) {
+  const renderMarkdown = (text) => {
+    const baseTextSize = fontSize / 100;
+    return text.split('\n').map((line, index) => {
+      if (line.startsWith('# ')) {
         return (
-          <h3
-            key={index}
-            style={{ fontSize: baseSize * 1.25 }}
-            className="font-bold mt-8 mb-4 text-white"
-          >
-            {line.slice(4)}
-          </h3>
-        );
-      } else if (line.startsWith('## ')) {
-        return (
-          <h2
-            key={index}
-            style={{ fontSize: baseSize * 1.5 }}
-            className="font-bold mt-10 mb-5 text-white"
-          >
-            {line.slice(3)}
-          </h2>
-        );
-      } else if (line.startsWith('# ')) {
-        return (
-          <h1
-            key={index}
-            style={{ fontSize: baseSize * 2 }}
+          <h1 
+            key={index} 
+            style={{ 
+              fontSize: `${3 * baseTextSize}rem`,
+              filter: `hue-rotate(${hue}deg)`
+            }} 
             className="font-bold mt-12 mb-6 text-white"
           >
             {line.slice(2)}
           </h1>
         );
-      }
-      
-      // Handle list items
-      if (line.startsWith('* ') || line.startsWith('- ')) {
-        const content = line.slice(2);
-        const formattedContent = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      } else if (line.startsWith('* ')) {
         return (
-          <p
-            key={index}
-            style={{ fontSize: baseSize }}
+          <p 
+            key={index} 
+            style={{ 
+              fontSize: `${1.125 * baseTextSize}rem`,
+              filter: `hue-rotate(${hue}deg)`
+            }} 
             className="my-6 text-white"
-            dangerouslySetInnerHTML={{ __html: formattedContent }}
-          />
+          >
+            {line.slice(2)}
+          </p>
         );
       }
-      
-      // Handle regular text with bold formatting
-      const formattedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       return (
-        <p
-          key={index}
-          style={{ fontSize: baseSize }}
+        <p 
+          key={index} 
+          style={{ 
+            fontSize: `${1.125 * baseTextSize}rem`,
+            filter: `hue-rotate(${hue}deg)`
+          }} 
           className="text-white"
-          dangerouslySetInnerHTML={{ __html: formattedLine }}
-        />
+        >
+          {line}
+        </p>
       );
     });
   };
@@ -249,44 +136,29 @@ const CreditsRoll = () => {
       {/* Control buttons */}
       <div className="absolute bottom-4 right-4 z-10 flex gap-2">
         <button
+          onClick={() => {
+            setIsPlaying(false);
+            setStartOffset(25);  // Reset to default value
+            if (containerRef.current) {
+              containerRef.current.style.transform = `translateY(25%)`;
+            }
+          }}
+          className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
+          title="Reload"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+        </button>
+        <button
           onClick={togglePlay}
           className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
         >
           {isPlaying ? <Pause className="text-white" size={24} /> : <Play className="text-white" size={24} />}
         </button>
         <button
-          onClick={handleReload}
-          className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
-          title="Reload"
-          aria-label="Reload credits"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-white"
-          >
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-            <path d="M8 16H3v5" />
-          </svg>
-        </button>
-        <button
           onClick={() => setShowSettings(true)}
           className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
-          title="Settings"
-          aria-label="Open settings"
-          aria-labelledby="settings-button-label"
         >
           <MoreVertical className="text-white" size={24} />
-          <span id="settings-button-label" className="sr-only">Settings</span>
         </button>
       </div>
 
@@ -299,7 +171,40 @@ const CreditsRoll = () => {
           <div className="space-y-6 py-4">
             <div className="space-y-4">
               <label className="flex flex-col gap-2">
-                <span>Starting Position (Y-offset)</span>
+                <span>Text Color (Hue)</span>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    value={hue}
+                    onChange={handleHueChange}
+                    className="w-full"
+                  />
+                  <span className="min-w-[4ch]">{hue}°</span>
+                </div>
+              </label>
+
+              <label className="flex flex-col gap-2">
+                <span>Font Size</span>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="50"
+                    max="200"
+                    value={fontSize}
+                    onChange={handleFontSizeChange}
+                    className="w-full"
+                  />
+                  <span className="min-w-[4ch]">{fontSize}%</span>
+                </div>
+              </label>
+
+              <label className="flex flex-col gap-2">
+                <span className="flex justify-between">
+                  <span>Starting Position</span>
+                  <span className="text-gray-400 text-sm">Controls where credits begin</span>
+                </span>
                 <div className="flex items-center gap-3">
                   <input
                     type="range"
@@ -307,10 +212,10 @@ const CreditsRoll = () => {
                     max="200"
                     value={startOffset}
                     onChange={handleOffsetChange}
-                    className="w-full"
-                    aria-label="Starting position offset"
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                    title={`${startOffset}%`}
                   />
-                  <span className="min-w-[4ch]">{startOffset}%</span>
+                  <span className="min-w-[4ch] text-gray-300">{startOffset}%</span>
                 </div>
               </label>
 
@@ -330,22 +235,6 @@ const CreditsRoll = () => {
                 </div>
               </label>
 
-              <label className="flex flex-col gap-2">
-                <span>Font Size</span>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="12"
-                    max="32"
-                    step="1"
-                    value={fontSize}
-                    onChange={handleFontSizeChange}
-                    className="w-full"
-                  />
-                  <span className="min-w-[3ch]">{fontSize}px</span>
-                </div>
-              </label>
-
               <label className="flex items-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md transition-colors w-full">
                 <Upload size={20} />
                 <span>Upload Markdown File</span>
@@ -354,7 +243,6 @@ const CreditsRoll = () => {
                   accept=".md"
                   onChange={handleFileUpload}
                   className="hidden"
-                  aria-label="Upload markdown file"
                 />
               </label>
             </div>
@@ -363,24 +251,36 @@ const CreditsRoll = () => {
       </Dialog>
 
       {/* Credits container */}
-      <div className="flex-1 overflow-hidden relative">
+      <div 
+        className="flex-1 overflow-hidden relative"
+        onWheel={(e) => {
+          if (!isPlaying) {
+            const delta = e.deltaY > 0 ? 2 : -2;
+            const newOffset = Math.max(0, Math.min(200, startOffset + delta));
+            setStartOffset(newOffset);
+            if (containerRef.current) {
+              containerRef.current.style.transform = `translateY(${newOffset}%)`;
+            }
+          }
+        }}
+      >
         <div
           ref={containerRef}
           className="absolute w-full text-center px-4"
           style={{
             animation: isPlaying ? `scroll-up ${20 / speed}s linear forwards` : 'none',
-            transform: isPlaying ? 'none' : `translateY(${startOffset}%)`
+            transform: !isPlaying ? `translateY(${startOffset}%)` : null
           }}
           onAnimationEnd={handleAnimationEnd}
         >
           <div ref={contentRef}>
             {renderMarkdown(markdown)}
           </div>
-          <div className="h-24" /> {/* Small padding at bottom */}
+          <div className="h-24" />
         </div>
       </div>
 
-      <style>{`
+      <style jsx>{`
         @keyframes scroll-up {
           0% {
             transform: translateY(${startOffset}%);
