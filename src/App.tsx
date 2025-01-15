@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Upload, MoreVertical } from 'lucide-react';
+import { Play, Pause, Upload, MoreVertical, Maximize2, Minimize2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,8 +28,9 @@ const CreditsRoll = () => {
   const [speed, setSpeed] = useState(1);
   const [startOffset, setStartOffset] = useState(25);
   const [showSettings, setShowSettings] = useState(false);
-  const [hue, setHue] = useState(0); // 0-360 degrees
-  const [fontSize, setFontSize] = useState(100); // percentage of base size
+  const [hue, setHue] = useState(0);
+  const [fontSize, setFontSize] = useState(100);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +142,16 @@ const CreditsRoll = () => {
     setIsPlaying(false);
   };
 
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black flex flex-col">
       {/* Control buttons */}
@@ -172,6 +183,24 @@ const CreditsRoll = () => {
           className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
         >
           {isPlaying ? <Pause className="text-white" size={24} /> : <Play className="text-white" size={24} />}
+        </button>
+
+        <label className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors cursor-pointer">
+          <Upload className="text-white" size={24} />
+          <input
+            type="file"
+            accept=".md,.txt"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </label>
+
+        <button
+          onClick={toggleFullscreen}
+          className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
+          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        >
+          {isFullscreen ? <Minimize2 className="text-white" size={24} /> : <Maximize2 className="text-white" size={24} />}
         </button>
         <button
           onClick={() => setShowSettings(true)}
